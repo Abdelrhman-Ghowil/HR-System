@@ -58,7 +58,7 @@ A comprehensive Human Resources evaluation and management platform built with Re
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd eval-flow-hr-pulse
+   cd HR-Evaluation-System
    ```
 
 2. **Install dependencies**
