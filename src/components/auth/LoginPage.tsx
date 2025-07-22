@@ -6,19 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building2, Users, Shield, BarChart3, Loader2 } from 'lucide-react';
+import { Building2, Users, Shield, BarChart3, Loader2, Settings } from 'lucide-react';
+import NetworkDiagnostic from '../debug/NetworkDiagnostic';
 
 const LoginPage = () => {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    const success = await login(email, password);
+    if (!email || !username || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    
+    const success = await login(email, username, password);
     if (!success) {
       setError('Invalid credentials. Please try again.');
     }
@@ -67,21 +75,36 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Demo credentials */}
+          {/* API Integration Info */}
+          {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <h4 className="font-semibold text-blue-900 mb-3">API Integration Ready</h4>
+            <div className="space-y-2 text-sm text-blue-700">
+              <p>✅ Authentication with JWT tokens</p>
+              <p>✅ Employee management</p>
+              <p>✅ Company & department handling</p>
+              <p>✅ Evaluation system integration</p>
+              <p className="text-xs text-blue-600 mt-2">
+                Configure your backend API URL in environment variables
+              </p>
+            </div>
+          </div> */}
+
+          {/* Demo Credentials */}
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
             <h4 className="font-semibold text-blue-900 mb-3">Demo Credentials:</h4>
-            <div className="space-y-2">
-              {demoCredentials.map((cred) => {
-                const Icon = cred.icon;
-                return (
-                  <div key={cred.email} className="flex items-center space-x-2 text-sm">
-                    <Icon className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium text-blue-900">{cred.role}:</span>
-                    <span className="text-blue-700">{cred.email}</span>
-                  </div>
-                );
-              })}
-              <p className="text-xs text-blue-600 mt-2">Password: password</p>
+            <div className="space-y-2 text-sm text-blue-700">
+              <div>
+                <p className="font-medium">Admin:</p>
+                <p>conan@gmail.com</p>
+                <p>Username: conan</p>
+                <p>Password: #$123456</p>
+              </div>
+              <div>
+                <p className="font-medium">HR Manager:</p>
+                <p>admin@company.com</p>
+                <p>Username: admin</p>
+                <p>Password: password</p>
+              </div>
             </div>
           </div>
         </div>
@@ -105,6 +128,19 @@ const LoginPage = () => {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                     disabled={isLoading}
                     className="h-11"
@@ -146,11 +182,46 @@ const LoginPage = () => {
                     'Sign In'
                   )}
                 </Button>
+                
+                {/* Network Diagnostic Toggle */}
+                <div className="pt-4 border-t">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDiagnostic(!showDiagnostic)}
+                    className="w-full text-xs"
+                  >
+                    <Settings className="mr-2 h-3 w-3" />
+                    {showDiagnostic ? 'Hide' : 'Show'} Network Diagnostic
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Network Diagnostic Panel */}
+      {showDiagnostic && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Network Diagnostic</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowDiagnostic(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-4">
+              <NetworkDiagnostic />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
