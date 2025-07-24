@@ -161,7 +161,7 @@ const EmployeeList = () => {
             role: 'EMP' as const,
             managerialWeight: 'IC' as const,
             status: 'ACTIVE' as const,
-            companyName: 'Squad',
+            companyName: 'Ninja',
             joinDate: new Date().toISOString().split('T')[0],
             username: '',
             firstName: '',
