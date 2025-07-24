@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import apiService from '../services/api';
 import { ApiUser, UserRole } from '../types/api';
 import { toast } from 'sonner';
+import { AuthDebugger } from '../utils/authDebug';
 
 interface User {
   id: string;
@@ -79,18 +80,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiService.login({ email, username, password });
       console.log('Login response:', response);
       
-      if (response.user) {
+      if (response.user && response.access) {
         const localUser = convertApiUserToLocalUser(response.user);
         console.log('Converted local user:', localUser);
+        
+        // Ensure token is properly saved
+        console.log('Token saved to localStorage:', {
+          tokenExists: !!response.access,
+          tokenLength: response.access.length,
+          isAuthenticated: apiService.isAuthenticated()
+        });
+        
         setUser(localUser);
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(localUser));
+        
+        // Verify token is working by checking authentication status
+        const authStatus = apiService.isAuthenticated();
+        console.log('Authentication status after login:', authStatus);
+        
+        // Debug authentication state
+        AuthDebugger.logAuthInfo();
+        
         toast.success(`Welcome back, ${localUser.name}!`);
         setIsLoading(false);
         return true;
       } else {
-        console.error('No user in response:', response);
-        toast.error('Login failed: No user data received');
+        console.error('No user or access token in response:', response);
+        toast.error('Login failed: No user data or access token received');
         setIsLoading(false);
         return false;
       }
@@ -123,20 +140,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const initializeAuth = () => {
+      console.log('🔄 Initializing authentication...');
+      
       const savedUser = localStorage.getItem('user');
       const isApiAuthenticated = apiService.isAuthenticated();
+      
+      console.log('Auth initialization state:', {
+        hasSavedUser: !!savedUser,
+        isApiAuthenticated,
+        hasToken: !!localStorage.getItem('auth_token')
+      });
       
       if (savedUser && isApiAuthenticated) {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
           setIsAuthenticated(true);
+          console.log('✅ User restored from localStorage:', parsedUser.name);
+          AuthDebugger.logAuthInfo();
         } catch (error) {
           console.error('Error parsing saved user:', error);
           logout();
         }
       } else if (!isApiAuthenticated) {
         // Clear any stale user data if API token is invalid
+        console.log('🧹 Clearing stale authentication data');
         setUser(null);
         setIsAuthenticated(false);
         localStorage.removeItem('user');

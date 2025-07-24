@@ -9,6 +9,9 @@ import {
   UpdateUserRequest,
   ApiEmployee,
   CreateEmployeeRequest,
+  CreateEmployeeUserRequest,
+  UpdateEmployeeRequest,
+  UpdateEmployeeUserRequest,
   ApiCompany,
   CreateCompanyRequest,
   ApiDepartment,
@@ -105,7 +108,7 @@ export const useUpdateUser = (options?: UseMutationOptions<ApiUser, ApiError, { 
 // Employee Hooks
 export const useEmployees = (
   params?: EmployeeQueryParams,
-  options?: UseQueryOptions<PaginatedResponse<ApiEmployee>, ApiError>
+  options?: UseQueryOptions<ApiEmployee, ApiError>
 ) => {
   return useQuery({
     queryKey: [...queryKeys.employees, params],
@@ -128,11 +131,11 @@ export const useEmployee = (
   });
 };
 
-export const useCreateEmployee = (options?: UseMutationOptions<ApiEmployee, ApiError, CreateEmployeeRequest>) => {
+export const useCreateEmployee = (options?: UseMutationOptions<ApiEmployee, ApiError, { employeeData: CreateEmployeeRequest; userData: CreateEmployeeUserRequest }>) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (employeeData: CreateEmployeeRequest) => apiService.createEmployee(employeeData),
+    mutationFn: ({ employeeData, userData }) => apiService.createEmployee(employeeData, userData),
     onSuccess: () => {
       toast.success('Employee created successfully!');
       queryClient.invalidateQueries({ queryKey: queryKeys.employees });
@@ -144,11 +147,11 @@ export const useCreateEmployee = (options?: UseMutationOptions<ApiEmployee, ApiE
   });
 };
 
-export const useUpdateEmployee = (options?: UseMutationOptions<ApiEmployee, ApiError, { employeeId: string; employeeData: Partial<CreateEmployeeRequest> }>) => {
+export const useUpdateEmployee = (options?: UseMutationOptions<ApiEmployee, ApiError, { employeeId: string; employeeData?: UpdateEmployeeRequest; userData?: UpdateEmployeeUserRequest }>) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ employeeId, employeeData }) => apiService.updateEmployee(employeeId, employeeData),
+    mutationFn: ({ employeeId, employeeData, userData }) => apiService.updateEmployee(employeeId, employeeData, userData),
     onSuccess: (data, variables) => {
       toast.success('Employee updated successfully!');
       queryClient.invalidateQueries({ queryKey: queryKeys.employee(variables.employeeId) });
