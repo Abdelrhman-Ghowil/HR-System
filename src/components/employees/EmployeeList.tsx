@@ -9,11 +9,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Plus, Edit, Mail, Phone, X, Search, Filter } from 'lucide-react';
+import { Users, Plus, Edit, Mail, Phone, X, Search, Filter, Loader2 } from 'lucide-react';
 import EmployeeDetails from './EmployeeDetails';
+import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee } from '../../hooks/useApi';
+import { ApiEmployee } from '../../types/api';
+import { EmployeeInput } from '../../types/shared';
+import { toast } from 'sonner';
 
-interface Employee {
-  id: string;
+// Convert ApiEmployee to EmployeeInput for EmployeeDetails component
+const convertApiEmployeeToEmployeeInput = (apiEmployee: ApiEmployee): EmployeeInput => {
+  return {
+    employee_id: apiEmployee.employee_id,
+    name: apiEmployee.name,
+    email: apiEmployee.email,
+    phone: apiEmployee.phone,
+    avatar: apiEmployee.avatar,
+    department: apiEmployee.department,
+    position: apiEmployee.position,
+    role: apiEmployee.role as EmployeeInput['role'],
+    managerialWeight: apiEmployee.managerial_weight as EmployeeInput['managerialWeight'],
+    status: apiEmployee.status.toLowerCase() as EmployeeInput['status'],
+    companyName: apiEmployee.company_name,
+    joinDate: apiEmployee.join_date
+  };
+};
+
+interface EmployeeFormData {
   name: string;
   email: string;
   phone: string;
@@ -21,171 +42,153 @@ interface Employee {
   avatar: string;
   department: string;
   position: string;
-  role: 'Admin' | 'HR' | 'HOD' | 'LM' | 'Employee';
-  managerialWeight: 'Supervisory' | 'Middle Management' | 'IC';
-  status: 'active' | 'inactive';
+  role: 'ADMIN' | 'HR' | 'HOD' | 'LM' | 'EMP';
+  managerialWeight: 'SUPERVISORY' | 'MIDDLE' | 'IC';
+  status: 'ACTIVE' | 'INACTIVE';
   companyName: string;
   joinDate: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  password?: string;
 }
 
 const EmployeeList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<ApiEmployee | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [newEmployee, setNewEmployee] = useState({
+  const [editingEmployee, setEditingEmployee] = useState<ApiEmployee | null>(null);
+  const [newEmployee, setNewEmployee] = useState<EmployeeFormData>({
     name: '',
     email: '',
     phone: '',
-    countryCode: '+1',
+    countryCode: '+966',
     avatar: '',
     department: '',
     position: '',
-    role: 'Employee' as const,
+    role: 'EMP' as const,
     managerialWeight: 'IC' as const,
-    status: 'active' as const,
-    companyName: 'Squad',
-    joinDate: new Date().toISOString().split('T')[0]
+    status: 'ACTIVE' as const,
+    companyName: 'Ninja',
+    joinDate: new Date().toISOString().split('T')[0],
+    username: '',
+    firstName: '',
+    lastName: '',
+    password: ''
   });
 
-  // Initialize employees data
-  useEffect(() => {
-    setEmployees(initialEmployees);
-  }, []);
+  // API hooks
+  const { data: employeesData, isLoading, error } = useEmployees();
+  const createEmployeeMutation = useCreateEmployee();
+  const updateEmployeeMutation = useUpdateEmployee();
+  const deleteEmployeeMutation = useDeleteEmployee();
 
-  const initialEmployees: Employee[] = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@company.com',
-      phone: '(555) 123-4567',
-      avatar: '/placeholder.svg',
-      department: 'Engineering',
-      position: 'Senior Developer',
-      role: 'Employee',
-      managerialWeight: 'IC',
-      status: 'active',
-      companyName: 'Squad',
-      joinDate: '2022-01-15'
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      email: 'michael.chen@company.com',
-      phone: '(555) 234-5678',
-      avatar: '/placeholder.svg',
-      department: 'Human Resources',
-      position: 'HR Manager',
-      role: 'HR',
-      managerialWeight: 'Middle Management',
-      status: 'active',
-      companyName: 'Squad',
-      joinDate: '2021-03-10'
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@company.com',
-      phone: '(555) 345-6789',
-      avatar: '/placeholder.svg',
-      department: 'Sales',
-      position: 'Sales Manager',
-      role: 'LM',
-      managerialWeight: 'Supervisory',
-      status: 'active',
-      companyName: 'Squad',
-      joinDate: '2020-07-22'
-    },
-    {
-      id: '4',
-      name: 'David Kim',
-      email: 'david.kim@company.com',
-      phone: '(555) 456-7890',
-      avatar: '/placeholder.svg',
-      department: 'Engineering',
-      position: 'Frontend Developer',
-      role: 'Employee',
-      managerialWeight: 'IC',
-      status: 'active',
-      companyName: 'Squad',
-      joinDate: '2023-02-01'
-    },
-    {
-      id: '5',
-      name: 'Lisa Wang',
-      email: 'lisa.wang@company.com',
-      phone: '(555) 567-8901',
-      avatar: '/placeholder.svg',
-      department: 'Marketing',
-      position: 'Marketing Specialist',
-      role: 'Employee',
-      managerialWeight: 'IC',
-      status: 'inactive',
-      companyName: 'Squad',
-      joinDate: '2021-11-05'
-    }
-  ];
+  const employees = employeesData?.results || [];
 
   // Handler functions
-  const handleToggleStatus = (employeeId: string) => {
-    setEmployees(prev => prev.map(emp => 
-      emp.id === employeeId 
-        ? { ...emp, status: emp.status === 'active' ? 'inactive' : 'active' }
-        : emp
-    ));
+  const handleToggleStatus = async (employeeId: string) => {
+    const employee = employees.find(emp => emp.employee_id === employeeId);
+    if (employee) {
+      const newStatus = employee.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      updateEmployeeMutation.mutate({
+        employeeId,
+        employeeData: { status: newStatus }
+      });
+    }
   };
 
-  const handleEditEmployee = (employee: Employee) => {
+  const handleEditEmployee = (employee: ApiEmployee) => {
     setEditingEmployee(employee);
     setIsEditModalOpen(true);
   };
 
   const handleSaveEdit = () => {
     if (editingEmployee) {
-      setEmployees(prev => prev.map(emp => 
-        emp.id === editingEmployee.id ? editingEmployee : emp
-      ));
-      setIsEditModalOpen(false);
-      setEditingEmployee(null);
+      const [firstName, ...lastNameParts] = editingEmployee.name.split(' ');
+      const lastName = lastNameParts.join(' ');
+      
+      updateEmployeeMutation.mutate({
+        employeeId: editingEmployee.employee_id,
+        employeeData: {
+          status: editingEmployee.status,
+          managerial_level: editingEmployee.managerial_weight,
+          join_date: editingEmployee.join_date,
+          departments: editingEmployee.department ? [editingEmployee.department] : []
+        },
+        userData: {
+          first_name: firstName,
+          last_name: lastName,
+          email: editingEmployee.email,
+          phone: editingEmployee.phone,
+          role: editingEmployee.role,
+          title: editingEmployee.position,
+          avatar: editingEmployee.avatar
+
+        }
+      }, {
+        onSuccess: () => {
+          setIsEditModalOpen(false);
+          setEditingEmployee(null);
+        }
+      });
     }
   };
 
   const handleAddEmployee = () => {
     if (newEmployee.name && newEmployee.email && newEmployee.department && newEmployee.position && newEmployee.managerialWeight) {
-      const employee: Employee = {
-        id: Date.now().toString(),
+      // Generate username from email if not provided
+      const username = newEmployee.username || newEmployee.email.split('@')[0];
+      
+      // Split name into first and last name if not provided separately
+      const [firstName, ...lastNameParts] = newEmployee.name.split(' ');
+      const lastName = lastNameParts.join(' ');
+      
+      const employeeData = {
+        company: 'daf632df-bdca-4e83-9ab1-70a14efef829', // You may need to get this from context or props
+        departments: [newEmployee.department],
+        managerial_level: newEmployee.managerialWeight as 'IC' | 'SUPERVISORY' | 'MIDDLE',
+        status: newEmployee.status === 'ACTIVE' ? 'ACTIVE' as const : 'INACTIVE' as const,
+        join_date: newEmployee.joinDate
+      };
+      
+      const userData = {
+        username,
+        first_name: newEmployee.firstName || firstName,
+        last_name: newEmployee.lastName || lastName,
         name: newEmployee.name,
         email: newEmployee.email,
-        phone: newEmployee.phone || '',
-        countryCode: newEmployee.countryCode,
-        avatar: newEmployee.avatar || '',
-        department: newEmployee.department,
-        position: newEmployee.position,
+        phone: newEmployee.phone,
         role: newEmployee.role,
-        managerialWeight: newEmployee.managerialWeight,
-        status: 'active',
-        companyName: newEmployee.companyName,
-        joinDate: newEmployee.joinDate
+        title: newEmployee.position,
+        avatar: newEmployee.avatar,
+        password: newEmployee.password,
+
       };
-      setEmployees(prev => [...prev, employee]);
-      setNewEmployee({
-        name: '',
-        email: '',
-        phone: '',
-        countryCode: '+1',
-        avatar: '',
-        department: '',
-        position: '',
-        role: 'Employee' as const,
-        managerialWeight: 'IC' as const,
-        status: 'active' as const,
-        companyName: 'Squad',
-        joinDate: new Date().toISOString().split('T')[0]
+      
+      createEmployeeMutation.mutate({ employeeData, userData }, {
+        onSuccess: () => {
+          setNewEmployee({
+            name: '',
+            email: '',
+            phone: '',
+            countryCode: '+1',
+            avatar: '',
+            department: '',
+            position: '',
+            role: 'EMP' as const,
+            managerialWeight: 'IC' as const,
+            status: 'ACTIVE' as const,
+            companyName: 'Ninja',
+            joinDate: new Date().toISOString().split('T')[0],
+            username: '',
+            firstName: '',
+            lastName: ''
+          });
+          setIsAddModalOpen(false);
+        }
       });
-      setIsAddModalOpen(false);
     }
   };
 
@@ -197,17 +200,41 @@ const EmployeeList = () => {
   const departments = ['all', 'Engineering', 'Human Resources', 'Sales', 'Marketing'];
 
   const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         employee.department.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = employee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === 'all' || employee.department === selectedDepartment;
     return matchesSearch && matchesDepartment;
   });
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading employees...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-600 mb-2">Error loading employees</div>
+          <div className="text-sm text-gray-600">{error.message}</div>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedEmployee) {
     return (
       <EmployeeDetails 
-        employee={selectedEmployee} 
+        employee={convertApiEmployeeToEmployeeInput(selectedEmployee)} 
         onBack={() => setSelectedEmployee(null)} 
       />
     );
@@ -308,6 +335,16 @@ const EmployeeList = () => {
                       className="w-full"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">password *</Label>
+                    <Input
+                      id="password"
+                      value={newEmployee.password || ''}
+                      onChange={(e) => setNewEmployee(prev => ({ ...prev, password: e.target.value.trim() }))}
+                      placeholder="Enter password"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -354,11 +391,11 @@ const EmployeeList = () => {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
                         <SelectItem value="HR">HR</SelectItem>
                         <SelectItem value="HOD">HOD</SelectItem>
                         <SelectItem value="LM">LM</SelectItem>
-                        <SelectItem value="Employee">Employee</SelectItem>
+                        <SelectItem value="EMP">EMP</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -374,8 +411,8 @@ const EmployeeList = () => {
                         <SelectValue placeholder="Select managerial weight" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Supervisory">Supervisory</SelectItem>
-                        <SelectItem value="Middle Management">Middle Management</SelectItem>
+                        <SelectItem value="SUPERVISORY">SUPERVISORY</SelectItem>
+                        <SelectItem value="MIDDLE">MIDDLE</SelectItem>
                         <SelectItem value="IC">IC</SelectItem>
                       </SelectContent>
                     </Select>
@@ -409,9 +446,8 @@ const EmployeeList = () => {
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="default_active">Default Active</SelectItem>
+                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -470,25 +506,25 @@ const EmployeeList = () => {
       {/* Employee Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEmployees.map((employee) => (
-          <Card key={employee.id} className="hover:shadow-lg transition-all duration-200 group">
+          <Card key={employee.employee_id || employee.user_id} className="hover:shadow-lg transition-all duration-200 group">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={employee.avatar} alt={employee.name} />
                     <AvatarFallback className="bg-blue-600 text-white">
-                      {employee.name.split(' ').map(n => n[0]).join('')}
+                      {employee.name?.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-lg">{employee.name}</h3>
-                    <p className="text-sm text-gray-600">{employee.position}</p>
+                    <h3 className="font-semibold text-lg">{employee.name || 'Unknown'}</h3>
+                    <p className="text-sm text-gray-600">{employee.position || employee.title || 'No Position'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
-                    checked={employee.status === 'active'}
-                    onCheckedChange={() => handleToggleStatus(employee.id)}
+                    checked={employee.status === 'ACTIVE' || employee.status === 'ACTIVE'}
+                    onCheckedChange={() => handleToggleStatus(employee.employee_id || employee.user_id)}
                   />
                   <Button
                     variant="outline"
@@ -504,19 +540,19 @@ const EmployeeList = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2 flex-wrap">
                     <Badge 
-                      variant={employee.status === 'active' ? 'default' : 'secondary'}
-                      className={employee.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                      variant={(employee.status === 'ACTIVE' || employee.status === 'ACTIVE') ? 'default' : 'secondary'}
+                      className={(employee.status === 'ACTIVE' || employee.status === 'ACTIVE') ? 'bg-green-100 text-green-800' : ''}
                     >
-                      {employee.status}
+                      {employee.status || 'Unknown'}
                     </Badge>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      {employee.role}
+                      {employee.role || 'No Role'}
                     </Badge>
                     <Badge variant="secondary" className="text-xs bg-purple-50 text-purple-700">
-                      {employee.managerialWeight}
+                      {employee.managerial_level || employee.managerialWeight || 'No Level'}
                     </Badge>
                   </div>
-                  <span className="text-sm text-gray-500">{employee.department}</span>
+                  <span className="text-sm text-gray-500">{employee.department || 'No Department'}</span>
                 </div>
                 
                 <div className="space-y-2">
@@ -526,23 +562,25 @@ const EmployeeList = () => {
                       href={`mailto:${employee.email}`}
                       className="truncate text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                     >
-                      {employee.email}
+                      {employee.email || 'No Email'}
                     </a>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Phone className="h-4 w-4" />
-                    <a 
-                      href={`https://wa.me/${(employee.countryCode || '+1').replace('+', '')}${employee.phone?.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-600 hover:text-green-800 hover:underline transition-colors"
-                    >
-                      {(employee.countryCode || '+1')} {employee.phone}
-                    </a>
-                  </div>
+                  {employee.phone && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Phone className="h-4 w-4" />
+                      <a 
+                        href={`https://wa.me/${(employee.countryCode || '+1').replace('+', '')}${employee.phone?.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 hover:text-green-800 hover:underline transition-colors"
+                      >
+                        {(employee.countryCode || '+1')} {employee.phone}
+                      </a>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Joined: {new Date(employee.joinDate).toLocaleDateString()}</span>
-                    <span className="font-medium">{employee.companyName}</span>
+                    <span>Joined: {employee.join_date ? new Date(employee.join_date).toLocaleDateString() : 'Unknown'}</span>
+                    <span className="font-medium">{employee.company_name || employee.companyName || 'No Company'}</span>
                   </div>
                 </div>
                 
@@ -680,17 +718,17 @@ const EmployeeList = () => {
                     <Label htmlFor="edit-role" className="text-sm font-medium">Role *</Label>
                     <Select 
                       value={editingEmployee.role}
-                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, role: value as 'Admin' | 'HR' | 'HOD' | 'LM' | 'Employee' } : null)}
+                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, role: value as 'ADMIN' | 'HR' | 'HOD' | 'LM' | 'Employee' } : null)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
                         <SelectItem value="HR">HR</SelectItem>
                         <SelectItem value="HOD">HOD</SelectItem>
                         <SelectItem value="LM">LM</SelectItem>
-                        <SelectItem value="Employee">Employee</SelectItem>
+                        <SelectItem value="EMP">EMP</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -698,14 +736,14 @@ const EmployeeList = () => {
                     <Label htmlFor="edit-managerialWeight" className="text-sm font-medium">Managerial Weight *</Label>
                     <Select 
                       value={editingEmployee.managerialWeight}
-                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, managerialWeight: value as 'Supervisory' | 'Middle Management' | 'IC' } : null)}
+                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, managerialWeight: value as 'SUPERVISORY' | 'MIDDLE' | 'IC' } : null)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select managerial weight" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Supervisory">Supervisory</SelectItem>
-                        <SelectItem value="Middle Management">Middle Management</SelectItem>
+                        <SelectItem value="SUPERVISORY">SUPERVISORY</SelectItem>
+                        <SelectItem value="MIDDLE">MIDDLE</SelectItem>
                         <SelectItem value="IC">IC</SelectItem>
                       </SelectContent>
                     </Select>
@@ -731,15 +769,14 @@ const EmployeeList = () => {
                     <Label htmlFor="edit-status" className="text-sm font-medium">Status *</Label>
                     <Select 
                       value={editingEmployee.status}
-                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, status: value as 'active' | 'inactive'} : null)}
+                      onValueChange={(value) => setEditingEmployee(prev => prev ? { ...prev, status: value as 'ACTIVE' | 'INACTIVE'} : null)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="default_active">Default Active</SelectItem>
+                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

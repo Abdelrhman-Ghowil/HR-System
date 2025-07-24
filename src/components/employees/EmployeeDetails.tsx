@@ -280,7 +280,7 @@ const EmployeeDetails = ({ employee, onBack }: EmployeeDetailsProps) => {
 
     // Transform evaluation data with error handling
     const evaluationResult = safeTransformData(
-      { evaluation: selectedEvaluation, employeeId: employeeResult.data.id },
+      { evaluation: selectedEvaluation, employeeId: parseInt(employeeResult.data.employee_id) },
       ({ evaluation, employeeId }) => transformEvaluationForDetails(evaluation, employeeId),
       'Failed to transform evaluation data'
     );

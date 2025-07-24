@@ -1,18 +1,26 @@
 // Shared type definitions for the HR Evaluation system
 
 export interface Employee {
-  id: number;
+  employee_id: string;
   name: string;
-  position: string;
-  department: string;
   email: string;
   phone: string;
-  hire_date: string;
+  avatar: string;
+  department: string;
+  position: string;
+  role: 'Admin' | 'HR' | 'HOD' | 'LM' | 'Employee';
+  managerial_weight: 'Supervisory' | 'Middle Management' | 'IC';
   status: 'active' | 'inactive';
+  company_name: string;
+  join_date: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
+  company_id: string;
 }
 
 export interface EmployeeInput {
-  id: string;
+  employee_id?: string;
   name: string;
   email: string;
   phone: string;
@@ -25,6 +33,9 @@ export interface EmployeeInput {
   status: 'active' | 'inactive';
   companyName: string;
   joinDate: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Evaluation {

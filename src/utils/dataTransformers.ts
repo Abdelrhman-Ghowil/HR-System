@@ -20,14 +20,20 @@ export const safeParseId = (id: string | number): number => {
 export const transformEmployeeForEvaluation = (employeeInput: EmployeeInput): Employee => {
   try {
     return {
-      id: safeParseId(employeeInput.id),
+      employee_id: employeeInput.employee_id || '1',
       name: employeeInput.name,
-      position: employeeInput.position,
-      department: employeeInput.department,
       email: employeeInput.email,
       phone: employeeInput.phone,
-      hire_date: employeeInput.joinDate,
-      status: employeeInput.status
+      avatar: employeeInput.avatar,
+      department: employeeInput.department,
+      position: employeeInput.position,
+      role: employeeInput.role,
+      managerial_weight: employeeInput.managerialWeight,
+      status: employeeInput.status,
+      company_name: employeeInput.companyName,
+      join_date: employeeInput.joinDate,
+      user_id: '1',
+      company_id: '1'
     };
   } catch (error) {
     console.error('Error transforming employee data:', error);
