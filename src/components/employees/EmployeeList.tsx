@@ -47,7 +47,7 @@ const EmployeeList = () => {
     role: 'Employee' as const,
     managerialWeight: 'IC' as const,
     status: 'active' as const,
-    companyName: 'Squad',
+    companyName: 'Ninja',
     joinDate: new Date().toISOString().split('T')[0]
   });
 
@@ -68,7 +68,7 @@ const EmployeeList = () => {
       role: 'Employee',
       managerialWeight: 'IC',
       status: 'active',
-      companyName: 'Squad',
+      companyName: 'Ninja',
       joinDate: '2022-01-15'
     },
     {
@@ -82,7 +82,7 @@ const EmployeeList = () => {
       role: 'HR',
       managerialWeight: 'Middle Management',
       status: 'active',
-      companyName: 'Squad',
+      companyName: 'Ninja',
       joinDate: '2021-03-10'
     },
     {
@@ -96,7 +96,7 @@ const EmployeeList = () => {
       role: 'LM',
       managerialWeight: 'Supervisory',
       status: 'active',
-      companyName: 'Squad',
+      companyName: 'Ninja',
       joinDate: '2020-07-22'
     },
     {
@@ -110,7 +110,7 @@ const EmployeeList = () => {
       role: 'Employee',
       managerialWeight: 'IC',
       status: 'active',
-      companyName: 'Squad',
+      companyName: 'Ninja',
       joinDate: '2023-02-01'
     },
     {
@@ -124,7 +124,7 @@ const EmployeeList = () => {
       role: 'Employee',
       managerialWeight: 'IC',
       status: 'inactive',
-      companyName: 'Squad',
+      companyName: 'Ninja',
       joinDate: '2021-11-05'
     }
   ];
@@ -182,7 +182,7 @@ const EmployeeList = () => {
         role: 'Employee' as const,
         managerialWeight: 'IC' as const,
         status: 'active' as const,
-        companyName: 'Squad',
+        companyName: 'Ninja',
         joinDate: new Date().toISOString().split('T')[0]
       });
       setIsAddModalOpen(false);
