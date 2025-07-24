@@ -66,8 +66,8 @@ const EmployeeList = () => {
   const updateEmployeeMutation = useUpdateEmployee();
   const deleteEmployeeMutation = useDeleteEmployee();
 
-  const employees = employeesData?.results || [];
 
+  const employees = employeesData?.results || [];
   // Handler functions
   const handleToggleStatus = async (employeeId: string) => {
     const employee = employees.find(emp => emp.employee_id === employeeId);
@@ -147,7 +147,7 @@ const EmployeeList = () => {
         password: newEmployee.password,
 
       };
-      
+   
       createEmployeeMutation.mutate({ employeeData, userData }, {
         onSuccess: () => {
           setNewEmployee({
