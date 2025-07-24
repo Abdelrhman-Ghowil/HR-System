@@ -6,7 +6,12 @@ import {
   CreateUserRequest,
   UpdateUserRequest,
   ApiEmployee,
+  ApiEmployeeData,
+  ApiUserData,
   CreateEmployeeRequest,
+  CreateEmployeeUserRequest,
+  UpdateEmployeeRequest,
+  UpdateEmployeeUserRequest,
   ApiCompany,
   CreateCompanyRequest,
   ApiDepartment,
@@ -162,6 +167,7 @@ class ApiService {
     const response: AxiosResponse<{access: string, refresh: string}> = await this.api.post('/api/auth/login/', credentials);
     const { access, refresh } = response.data;
 
+    // Save tokens to localStorage and instance
     this.saveToken(access);
     if (refresh) {
       localStorage.setItem('refresh_token', refresh);
@@ -169,6 +175,13 @@ class ApiService {
 
     // Extract user info from JWT token
     const user = this.extractUserFromToken(access);
+    
+    console.log('Login successful, token saved:', {
+      tokenLength: access.length,
+      hasRefresh: !!refresh,
+      userId: user.id,
+      userRole: user.role
+    });
     
     return {
       access,
@@ -246,31 +259,156 @@ class ApiService {
     return response.data;
   }
 
-  // Employee methods
-  async getEmployees(params?: EmployeeQueryParams): Promise<PaginatedResponse<ApiEmployee>> {
-    const response: AxiosResponse<PaginatedResponse<ApiEmployee>> = await this.api.get('/api/employees/', {
-      params,
+  // Employee methods - combining data from two endpoints
+  async getEmployees(params?: EmployeeQueryParams): Promise<ApiEmployee> {
+    console.log('Fetching employees with token:', {
+      hasToken: !!this.getToken(),
+      tokenLength: this.getToken()?.length || 0,
+      isAuthenticated: this.isAuthenticated()
     });
-    return response.data;
+    
+    try {
+      // Fetch employee data from /api/employees/
+      const employeeResponse: AxiosResponse<ApiEmployeeData> = await this.api.get('/api/employees/', {
+        params,
+      });
+      
+      console.log('Employee data fetched successfully:', {
+        response:employeeResponse.data,
+        count: employeeResponse.data?.length || 0
+      });
+      
+      // Fetch user data from /api/accounts/users/
+      const userResponse: AxiosResponse<ApiUserData> = await this.api.get('/api/accounts/users/');
+      
+      console.log('User data fetched successfully:', {
+        count: userResponse.data?.length || 0,
+      });
+      
+      // Create a map of user data by user_id for quick lookup
+      const userMap = new Map<string, ApiUserData>();
+      if (userResponse.data) {
+        userResponse.data.forEach(user => {
+          userMap.set(user.user_id, user);
+        });
+      }
+      
+      // Merge employee and user data
+      const mergedEmployees: ApiEmployee[] = (employeeResponse.data || []).map(employee => {
+        const user = userMap.get(employee.user_id);
+        return this.mergeEmployeeData(employee, user);
+      });
+      
+      console.log('Employees merged successfully:', {
+        totalEmployees: mergedEmployees.length,
+        sampleEmployee: mergedEmployees[0] ? {
+          id: mergedEmployees[0].employee_id,
+          name: mergedEmployees[0].name,
+          email: mergedEmployees[0].email
+        } : null
+      });
+      
+      return {
+        count: employeeResponse.data?.length || 0,
+        // next: employeeResponse.data?.next || null,
+        // previous: employeeResponse.data?.previous || null,
+        results: mergedEmployees
+      };
+    } catch (error) {
+      console.error('Error fetching employees:', {
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   async getEmployee(employeeId: string): Promise<ApiEmployee> {
-    const response: AxiosResponse<ApiEmployee> = await this.api.get(`/api/employees/${employeeId}/`);
-    return response.data;
+    // Fetch employee data
+    const employeeResponse: AxiosResponse<ApiEmployeeData> = await this.api.get(`/api/employees/${employeeId}/`);
+    
+    // Fetch corresponding user data
+    const userResponse: AxiosResponse<ApiUserData> = await this.api.get(`/api/accounts/users/${employeeResponse.data.user_id}/`);
+    
+    return this.mergeEmployeeData(employeeResponse.data, userResponse.data);
   }
 
-  async createEmployee(employeeData: CreateEmployeeRequest): Promise<ApiEmployee> {
-    const response: AxiosResponse<ApiEmployee> = await this.api.post('/api/employees/', employeeData);
-    return response.data;
+  async createEmployee(employeeData: CreateEmployeeRequest, userData: CreateEmployeeUserRequest): Promise<ApiEmployee> {
+    // First create the user
+    const userResponse: AxiosResponse<ApiUserData> = await this.api.post('/api/accounts/users/', userData);
+    
+    // Then create the employee record with the user_id
+    const employeePayload = {
+      ...employeeData,
+      user_id: userResponse.data.user_id
+    };
+    
+    const employeeResponse: AxiosResponse<ApiEmployeeData> = await this.api.post('/api/employees/', employeePayload);
+    
+    return this.mergeEmployeeData(employeeResponse.data, userResponse.data);
   }
 
-  async updateEmployee(employeeId: string, employeeData: Partial<CreateEmployeeRequest>): Promise<ApiEmployee> {
-    const response: AxiosResponse<ApiEmployee> = await this.api.patch(`/api/employees/${employeeId}/`, employeeData);
-    return response.data;
+  async updateEmployee(employeeId: string, employeeData?: UpdateEmployeeRequest, userData?: UpdateEmployeeUserRequest): Promise<ApiEmployee> {
+    // Get current employee to find user_id
+    const currentEmployee = await this.getEmployee(employeeId);
+    
+    // Update employee data if provided
+    if (employeeData) {
+      await this.api.patch(`/api/employees/${employeeId}/`, employeeData);
+    }
+    
+    // Update user data if provided
+    if (userData) {
+      await this.api.patch(`/api/accounts/users/${currentEmployee.user_id}/`, userData);
+    }
+    
+    // Return updated employee
+    return this.getEmployee(employeeId);
   }
 
   async deleteEmployee(employeeId: string): Promise<void> {
+    // Get employee to find user_id
+    const employee = await this.getEmployee(employeeId);
+    
+    // Delete employee record first
     await this.api.delete(`/api/employees/${employeeId}/`);
+    
+    // Optionally delete user record (uncomment if needed)
+    // await this.api.delete(`/api/accounts/users/${employee.user_id}/`);
+  }
+
+  // Helper method to merge employee and user data
+  private mergeEmployeeData(employeeData: ApiEmployeeData, userData?: ApiUserData): ApiEmployee {
+    // Handle case where userData is not found - create a fallback employee record
+    const fallbackUserData = userData || {
+      user_id: employeeData.user_id,
+      name: 'Unknown User',
+      email: '',
+      phone: '',
+      avatar: '',
+      title: 'Unknown Position',
+      role: 'Employee' as const
+    };
+    
+    return {
+      employee_id: employeeData.employee_id,
+      name: fallbackUserData.name || 'Unknown User',
+      email: fallbackUserData.email || '',
+      phone: fallbackUserData.phone || '',
+      avatar: fallbackUserData.avatar || '',
+      department: (employeeData.departments && employeeData.departments.length > 0) ? employeeData.departments[0] : '',
+      position: fallbackUserData.title || 'Unknown Position',
+      role: fallbackUserData.role || 'Employee',
+      managerial_weight: employeeData.managerial_level || 'IC',
+      status: employeeData.status || 'ACTIVE',
+      company_name: '', // Will need to fetch company name separately if needed
+      join_date: employeeData.join_date || new Date().toISOString(),
+      created_at: employeeData.created_at || new Date().toISOString(),
+      updated_at: employeeData.updated_at || new Date().toISOString(),
+      user_id: employeeData.user_id,
+      company_id: employeeData.company
+    };
   }
 
   // Company methods

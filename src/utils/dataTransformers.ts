@@ -20,7 +20,7 @@ export const safeParseId = (id: string | number): number => {
 export const transformEmployeeForEvaluation = (employeeInput: EmployeeInput): Employee => {
   try {
     return {
-      id: safeParseId(employeeInput.id),
+      id: safeParseId(employeeInput.employee_id || '1'),
       name: employeeInput.name,
       position: employeeInput.position,
       department: employeeInput.department,

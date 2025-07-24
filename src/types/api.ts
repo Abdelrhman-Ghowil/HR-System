@@ -55,15 +55,48 @@ export interface UpdateUserRequest {
   avatar?: string;
 }
 
-// Employee Types
-export interface ApiEmployee {
-  id: string;
+// Employee Types - Raw API responses
+export interface ApiEmployeeData {
+  employee_id: string;
   user_id: string;
   company: string;
+  departments: string[];
   managerial_level: ManagerialLevel;
   status: EmployeeStatus;
   join_date: string;
-  user: ApiUser;
+}
+
+export interface ApiUserData {
+  user_id: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  role: UserRole;
+  title: string;
+}
+
+// Combined Employee interface for frontend use
+export interface ApiEmployee {
+  employee_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  department: string;
+  position: string;
+  role: UserRole;
+  managerial_weight: ManagerialLevel;
+  status: EmployeeStatus;
+  company_name: string;
+  join_date: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
+  company_id: string;
 }
 
 export type ManagerialLevel = 'IC' | 'SUPERVISORY' | 'MIDDLE';
@@ -72,9 +105,38 @@ export type EmployeeStatus = 'ACTIVE' | 'INACTIVE';
 export interface CreateEmployeeRequest {
   user_id: string;
   company: string;
+  departments?: string[];
   managerial_level: ManagerialLevel;
   status: EmployeeStatus;
   join_date: string;
+}
+
+export interface CreateEmployeeUserRequest {
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  title: string;
+  avatar?: string;
+}
+
+export interface UpdateEmployeeRequest {
+  managerial_level?: ManagerialLevel;
+  status?: EmployeeStatus;
+  join_date?: string;
+  departments?: string[];
+}
+
+export interface UpdateEmployeeUserRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  role?: UserRole;
+  title?: string;
+  avatar?: string;
 }
 
 // Company Types

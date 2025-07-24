@@ -37,7 +37,6 @@ This project uses environment-specific configuration files:
 
 - **Development build**: `npm run build:dev`
 - **Production build**: `npm run build`
-- **Production build with explicit env vars**: `npm run build:prod`
 
 ### Deployment Steps
 
@@ -50,16 +49,10 @@ This project uses environment-specific configuration files:
 
 If you still encounter CORS errors:
 
-1. **Check Environment Variables**: Ensure `VITE_API_BASE_URL` is set to `https://hr-eval-sys.vercel.app` in production
-2. **Use Explicit Build**: Try using `npm run build:prod` which explicitly sets environment variables
-3. **Verify Backend**: Check that the backend API at `https://hr-eval-sys.vercel.app` has proper CORS headers
-4. **Clear Cache**: Clear browser cache and try again
-5. **Check Build Logs**: Review Vercel deployment logs for any build errors
-6. **Environment File Issues**: If `.env.production` is not in the repository, the environment variables in `vercel.json` and the build script should handle this
-7. **Manual Vercel Config**: Go to Vercel dashboard → Settings → Environment Variables and manually add:
-   - `VITE_API_BASE_URL` = `https://hr-eval-sys.vercel.app`
-   - `VITE_APP_ENV` = `production`
-   - `VITE_API_TIMEOUT` = `10000`
+1. Check that `VITE_API_BASE_URL` is set to `https://hr-eval-sys.vercel.app` in production
+2. Verify the backend API at `https://hr-eval-sys.vercel.app` has proper CORS headers
+3. Clear browser cache and try again
+4. Check Vercel deployment logs for any build errors
 
 ### Local Development
 
